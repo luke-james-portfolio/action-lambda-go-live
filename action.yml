@@ -1,0 +1,40 @@
+name: 'Lambda Go Live'
+description: 'Composite action to publish code to an AWS S3 bucket and update the associate Lambda function.'
+inputs:
+  region:
+    description: 'Region of the bucket we are deploying into.'
+    required: true
+  deployment_package:
+    description: 'Path to the function.zip (or equivalent) function file to upload to S3.'
+    required: true
+  function_name:
+    description: 'Name of the function we should update.'
+    required: true
+  bucket_name:
+    description: 'Name of the S3 bucket to upload our function to.'
+    required: true
+  bucket_key:
+    description: 'Name of the S3 bucket key to use.'
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+
+    - name: Upload Deployment Package
+      id: upload
+      run: |
+        aws s3 cp --region ${{inputs.region}} \
+          ${{inputs.deployment_package}} \
+          s3://${{inputs.bucket_name}}/${{inputs.bucket_key}}
+      shell: bash
+    
+    - name: Go Live
+      id: live
+      run: |
+        aws lambda update-function-code \
+          --function-name ${{inputs.function_name}} \
+          --s3-bucket ${{inputs.bucket_name}} \
+          --s3-key ${{inputs.bucket_key}} \
+          --region ${{inputs.region}}
+      shell: bash
